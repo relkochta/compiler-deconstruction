@@ -2,7 +2,7 @@ use anyhow::Result;
 use anyhow::bail;
 
 use crate::{
-    a86::{Arg, Instruction, Register, Program as A86Program},
+    a86::{Arg, Instruction, Program as A86Program, Register},
     loot::{Datum, Defn, Expr, Program as LootProgram},
 };
 
@@ -37,11 +37,7 @@ pub fn parse_const(lit: u64) -> Option<Datum> {
 pub fn parse_expr(program: &A86Program, position: usize) -> Expr {
     match program.instructions()[position..] {
         [
-            Instruction::Mov(Arg::Register(Register::Rax), Arg::Literal(lit)),
-            ..,
-        ] => Expr::Literal(parse_const(lit).unwrap()),
-        [
-            Instruction::Mov(Arg::Register(Register::Eax), Arg::Literal(lit)),
+            Instruction::Mov(Arg::Register(Register::Eax | Register::Rax), Arg::Literal(lit)),
             ..,
         ] => Expr::Literal(parse_const(lit).unwrap()),
         _ => Expr::Unknown,
