@@ -19,9 +19,12 @@ fn main() -> Result<()> {
     let args = Args::parse();
 
     // Construct an A86 program from the input program
-    let program = Program::from_elf_file(&args.program)?;
+    let a86_program = Program::from_elf_file(&args.program)?;
     //println!("Program: {:#x?}", program);
-    println!("Result: {:#x?}", parse(&program));
+
+    // Decompile the program
+    let loot_program = parse(&a86_program)?;
+    println!("Decompiled Program: {:#x?}", loot_program);
 
     Ok(())
 }
