@@ -255,6 +255,30 @@ pub struct Program {
 }
 
 impl Program {
+    pub fn entry_point(&self) -> Address {
+        self.entry_point
+    }
+
+    pub fn instructions(&self) -> &[Instruction] {
+        self.instructions.as_slice()
+    }
+
+    pub fn address_to_index(&self, address: Address) -> Option<usize> {
+        self.memory_map.get_by_left(&address).copied()
+    }
+
+    pub fn index_to_address(&self, index: usize) -> Option<Address> {
+        self.memory_map.get_by_right(&index).copied()
+    }
+
+    pub fn address_to_symbols(&self, address: Address) -> HashSet<String> {
+        self.address_to_symbols.get(&address).cloned().unwrap_or(HashSet::new())
+    }
+
+    pub fn symbol_to_address(&self, symbol: &str) -> Option<Address> {
+        self.symbols_to_address.get(symbol).copied()
+    }
+
     pub fn from_elf_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let elf_bytes = fs::read(path).context("Failed to read ELF file")?;
         let elf_file =

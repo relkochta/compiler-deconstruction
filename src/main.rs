@@ -1,5 +1,6 @@
 mod a86;
 mod decompiler;
+mod loot;
 
 use std::path::PathBuf;
 
