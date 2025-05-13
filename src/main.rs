@@ -1,4 +1,5 @@
 mod a86;
+mod decompiler;
 
 use std::path::PathBuf;
 
@@ -18,8 +19,6 @@ fn main() -> Result<()> {
     // Construct an A86 program from the input program
     let program = Program::from_elf_file(&args.program)?;
     println!("Program: {:#x?}", program);
-
-
 
     Ok(())
 }
