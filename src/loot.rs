@@ -1,4 +1,3 @@
-use crate::a86::Instruction;
 
 type Id = usize;
 

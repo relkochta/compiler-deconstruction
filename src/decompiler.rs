@@ -2,8 +2,8 @@ use anyhow::Result;
 use anyhow::bail;
 
 use crate::{
-    a86::{self, Arg, Instruction, Program, Register},
-    loot::{self, Datum, Defn, Expr, Program as LootProgram},
+    a86::{Arg, Instruction, Register, Program as A86Program},
+    loot::{Datum, Defn, Expr, Program as LootProgram},
 };
 
 pub fn parse_const(lit: u64) -> Option<Datum> {
@@ -34,7 +34,7 @@ pub fn parse_const(lit: u64) -> Option<Datum> {
     }
 }
 
-pub fn parse_expr(program: &a86::Program, position: usize) -> Expr {
+pub fn parse_expr(program: &A86Program, position: usize) -> Expr {
     match program.instructions()[position..] {
         [
             Instruction::Mov(Arg::Register(Register::Rax), Arg::Literal(lit)),
@@ -48,13 +48,13 @@ pub fn parse_expr(program: &a86::Program, position: usize) -> Expr {
     }
 }
 
-pub fn parse_defines(program: &a86::Program, position: usize) -> (Vec<Defn>, usize) {
+pub fn parse_defines(program: &A86Program, position: usize) -> (Vec<Defn>, usize) {
     // TODO: implement this
 
     (Vec::new(), position + 1) // skip add rbx
 }
 
-pub fn parse(program: &a86::Program) -> Result<loot::Program> {
+pub fn parse(program: &A86Program) -> Result<LootProgram> {
     let (defines, expr_start) = match program.instructions()[0..3] {
         [
             Instruction::Push(Arg::Register(Register::Rbx)),
@@ -64,7 +64,7 @@ pub fn parse(program: &a86::Program) -> Result<loot::Program> {
         _ => bail!("Unable to parse loot program"),
     };
     Ok(LootProgram {
-        defines: defines,
+        defines,
         expr: Box::new(parse_expr(program, expr_start)),
     })
 }
