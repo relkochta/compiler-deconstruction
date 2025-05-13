@@ -274,7 +274,11 @@ impl Program {
                             Arg::Register(t.op_register(1).try_into()?),
                         )
                     }
-                    t if t.code() == Code::Mov_rm64_r64 || t.code() == Code::Mov_r64_rm64 => {
+                    t if t.code() == Code::Mov_rm64_r64
+                        || t.code() == Code::Mov_r64_rm64
+                        || t.code() == Code::Mov_r32_rm32
+                        || t.code() == Code::Mov_rm32_r32 =>
+                    {
                         Instruction::Mov(
                             match t.op0_kind() {
                                 OpKind::Memory => Arg::Offset(
