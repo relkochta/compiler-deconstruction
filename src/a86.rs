@@ -95,6 +95,150 @@ pub enum Instruction {
     Ret,
 }
 
+impl TryFrom<iced_x86::Instruction> for Instruction {
+    type Error = anyhow::Error;
+
+    fn try_from(value: iced_x86::Instruction) -> std::result::Result<Self, Self::Error> {
+        Ok(match value {
+            t if t.code() == Code::Push_r64 => {
+                Instruction::Push(Arg::Register(t.op_register(0).try_into()?))
+            }
+            t if t.code() == Code::Pop_r64 => {
+                Instruction::Pop(Arg::Register(t.op_register(0).try_into()?))
+            }
+            t if t.code() == Code::Jmp_rm64 => {
+                Instruction::Jmp(Arg::Register(t.op_register(0).try_into()?))
+            }
+            t if t.code() == Code::Jmp_rel8_64 => {
+                Instruction::Jmp(Arg::Address(t.memory_displacement64()))
+            }
+            t if t.code() == Code::Je_rel32_64 || t.code() == Code::Je_rel8_64 => {
+                Instruction::Je(Arg::Address(t.memory_displacement64()))
+            }
+            t if t.code() == Code::Jl_rel32_64 || t.code() == Code::Jl_rel8_64 => {
+                Instruction::Jl(Arg::Address(t.memory_displacement64()))
+            }
+            t if t.code() == Code::Jg_rel32_64 || t.code() == Code::Jg_rel8_64 => {
+                Instruction::Jg(Arg::Address(t.memory_displacement64()))
+            }
+            t if t.code() == Code::Jne_rel32_64 || t.code() == Code::Jne_rel8_64 => {
+                Instruction::Jne(Arg::Address(t.memory_displacement64()))
+            }
+            t if t.code() == Code::Call_rel32_64 => Instruction::Call(t.memory_displacement64()),
+            t if t.code() == Code::Cmp_rm64_imm8 => Instruction::Cmp(
+                Arg::Register(t.op_register(0).try_into()?),
+                Arg::Literal(t.immediate(1)),
+            ),
+            t if t.code() == Code::Add_rm64_imm8
+                || t.code() == Code::Add_rm64_imm32
+                || t.code() == Code::Add_rm32_imm8
+                || t.code() == Code::Add_rm32_imm32 =>
+            {
+                Instruction::Add(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Literal(t.immediate(1)),
+                )
+            }
+            t if t.code() == Code::Add_rm64_r64 || t.code() == Code::Add_rm32_r32 => {
+                Instruction::Add(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Register(t.op_register(1).try_into()?),
+                )
+            }
+            t if t.code() == Code::Sub_rm64_imm8
+                || t.code() == Code::Sub_rm64_imm32
+                || t.code() == Code::Sub_rm32_imm8
+                || t.code() == Code::Sub_rm32_imm32 =>
+            {
+                Instruction::Sub(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Literal(t.immediate(1)),
+                )
+            }
+            t if t.code() == Code::Sub_rm64_r64 || t.code() == Code::Sub_rm32_r32 => {
+                Instruction::Sub(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Register(t.op_register(1).try_into()?),
+                )
+            }
+            t if t.code() == Code::And_rm64_imm8
+                || t.code() == Code::And_rm64_imm32
+                || t.code() == Code::And_rm32_imm8
+                || t.code() == Code::And_rm32_imm32 =>
+            {
+                Instruction::And(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Literal(t.immediate(1)),
+                )
+            }
+            t if t.code() == Code::And_rm64_r64 || t.code() == Code::And_rm32_r32 => {
+                Instruction::And(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Register(t.op_register(1).try_into()?),
+                )
+            }
+            t if t.code() == Code::Xor_rm64_imm8
+                || t.code() == Code::Xor_rm64_imm32
+                || t.code() == Code::Xor_rm32_imm8
+                || t.code() == Code::Xor_rm32_imm32 =>
+            {
+                Instruction::Xor(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Literal(t.immediate(1)),
+                )
+            }
+            t if t.code() == Code::Xor_rm64_r64 || t.code() == Code::Xor_rm32_r32 => {
+                Instruction::Xor(
+                    Arg::Register(t.op_register(0).try_into()?),
+                    Arg::Register(t.op_register(1).try_into()?),
+                )
+            }
+            t if t.code() == Code::Mov_rm64_r64
+                || t.code() == Code::Mov_r64_rm64
+                || t.code() == Code::Mov_r32_rm32
+                || t.code() == Code::Mov_rm32_r32 =>
+            {
+                Instruction::Mov(
+                    match t.op0_kind() {
+                        OpKind::Memory => Arg::Offset(
+                            t.memory_base().try_into()?,
+                            t.memory_displacement64() as i64,
+                        ),
+                        OpKind::Register => Arg::Register(t.op_register(0).try_into()?),
+                        _ => bail!("incorrect operand kind found for move dst"),
+                    },
+                    match t.op1_kind() {
+                        OpKind::Memory => Arg::Offset(
+                            t.memory_base().try_into()?,
+                            t.memory_displacement64() as i64,
+                        ),
+                        OpKind::Register => Arg::Register(t.op_register(1).try_into()?),
+                        _ => bail!("incorrect operand kind found for move src"),
+                    },
+                )
+            }
+            t if t.code() == Code::Mov_r32_imm32 => Instruction::Mov(
+                Arg::Register(t.op_register(0).try_into()?),
+                Arg::Literal(t.immediate(1)),
+            ),
+            t if t.code() == Code::Cmove_r64_rm64 => Instruction::Cmove(
+                Arg::Register(t.op_register(0).try_into()?),
+                Arg::Register(t.op_register(1).try_into()?),
+            ),
+            t if t.code() == Code::Cmovl_r64_rm64 => Instruction::Cmovl(
+                Arg::Register(t.op_register(0).try_into()?),
+                Arg::Register(t.op_register(1).try_into()?),
+            ),
+            t if t.code() == Code::Lea_r64_m => Instruction::Lea(
+                Arg::Register(t.op_register(0).try_into()?),
+                Arg::Address(t.memory_displacement64()),
+            ),
+            t if t.code() == Code::Retnq => Instruction::Ret,
+            t => bail!("instruction code {:#?} not implmented", t.code()),
+        })
+    }
+}
+
 #[derive(Debug)]
 pub struct Program {
     /// The address of the instruction to which the "entry" symbol points
@@ -177,147 +321,7 @@ impl Program {
 
         let a86_instrs = instrs
             .iter()
-            .map(|x86_instr| {
-                Ok(match x86_instr {
-                    t if t.code() == Code::Push_r64 => {
-                        Instruction::Push(Arg::Register(t.op_register(0).try_into()?))
-                    }
-                    t if t.code() == Code::Pop_r64 => {
-                        Instruction::Pop(Arg::Register(t.op_register(0).try_into()?))
-                    }
-                    t if t.code() == Code::Jmp_rm64 => {
-                        Instruction::Jmp(Arg::Register(t.op_register(0).try_into()?))
-                    }
-                    t if t.code() == Code::Jmp_rel8_64 => {
-                        Instruction::Jmp(Arg::Address(t.memory_displacement64()))
-                    }
-                    t if t.code() == Code::Je_rel32_64 || t.code() == Code::Je_rel8_64 => {
-                        Instruction::Je(Arg::Address(t.memory_displacement64()))
-                    }
-                    t if t.code() == Code::Jl_rel32_64 || t.code() == Code::Jl_rel8_64 => {
-                        Instruction::Jl(Arg::Address(t.memory_displacement64()))
-                    }
-                    t if t.code() == Code::Jg_rel32_64 || t.code() == Code::Jg_rel8_64 => {
-                        Instruction::Jg(Arg::Address(t.memory_displacement64()))
-                    }
-                    t if t.code() == Code::Jne_rel32_64 || t.code() == Code::Jne_rel8_64 => {
-                        Instruction::Jne(Arg::Address(t.memory_displacement64()))
-                    }
-                    t if t.code() == Code::Call_rel32_64 => {
-                        Instruction::Call(t.memory_displacement64())
-                    }
-                    t if t.code() == Code::Cmp_rm64_imm8 => Instruction::Cmp(
-                        Arg::Register(t.op_register(0).try_into()?),
-                        Arg::Literal(t.immediate(1)),
-                    ),
-                    t if t.code() == Code::Add_rm64_imm8
-                        || t.code() == Code::Add_rm64_imm32
-                        || t.code() == Code::Add_rm32_imm8
-                        || t.code() == Code::Add_rm32_imm32 =>
-                    {
-                        Instruction::Add(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Literal(t.immediate(1)),
-                        )
-                    }
-                    t if t.code() == Code::Add_rm64_r64 || t.code() == Code::Add_rm32_r32 => {
-                        Instruction::Add(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Register(t.op_register(1).try_into()?),
-                        )
-                    }
-                    t if t.code() == Code::Sub_rm64_imm8
-                        || t.code() == Code::Sub_rm64_imm32
-                        || t.code() == Code::Sub_rm32_imm8
-                        || t.code() == Code::Sub_rm32_imm32 =>
-                    {
-                        Instruction::Sub(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Literal(t.immediate(1)),
-                        )
-                    }
-                    t if t.code() == Code::Sub_rm64_r64 || t.code() == Code::Sub_rm32_r32 => {
-                        Instruction::Sub(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Register(t.op_register(1).try_into()?),
-                        )
-                    }
-                    t if t.code() == Code::And_rm64_imm8
-                        || t.code() == Code::And_rm64_imm32
-                        || t.code() == Code::And_rm32_imm8
-                        || t.code() == Code::And_rm32_imm32 =>
-                    {
-                        Instruction::And(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Literal(t.immediate(1)),
-                        )
-                    }
-                    t if t.code() == Code::And_rm64_r64 || t.code() == Code::And_rm32_r32 => {
-                        Instruction::And(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Register(t.op_register(1).try_into()?),
-                        )
-                    }
-                    t if t.code() == Code::Xor_rm64_imm8
-                        || t.code() == Code::Xor_rm64_imm32
-                        || t.code() == Code::Xor_rm32_imm8
-                        || t.code() == Code::Xor_rm32_imm32 =>
-                    {
-                        Instruction::Xor(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Literal(t.immediate(1)),
-                        )
-                    }
-                    t if t.code() == Code::Xor_rm64_r64 || t.code() == Code::Xor_rm32_r32 => {
-                        Instruction::Xor(
-                            Arg::Register(t.op_register(0).try_into()?),
-                            Arg::Register(t.op_register(1).try_into()?),
-                        )
-                    }
-                    t if t.code() == Code::Mov_rm64_r64
-                        || t.code() == Code::Mov_r64_rm64
-                        || t.code() == Code::Mov_r32_rm32
-                        || t.code() == Code::Mov_rm32_r32 =>
-                    {
-                        Instruction::Mov(
-                            match t.op0_kind() {
-                                OpKind::Memory => Arg::Offset(
-                                    t.memory_base().try_into()?,
-                                    t.memory_displacement64() as i64,
-                                ),
-                                OpKind::Register => Arg::Register(t.op_register(0).try_into()?),
-                                _ => bail!("incorrect operand kind found for move dst"),
-                            },
-                            match t.op1_kind() {
-                                OpKind::Memory => Arg::Offset(
-                                    t.memory_base().try_into()?,
-                                    t.memory_displacement64() as i64,
-                                ),
-                                OpKind::Register => Arg::Register(t.op_register(1).try_into()?),
-                                _ => bail!("incorrect operand kind found for move src"),
-                            },
-                        )
-                    }
-                    t if t.code() == Code::Mov_r32_imm32 => Instruction::Mov(
-                        Arg::Register(t.op_register(0).try_into()?),
-                        Arg::Literal(t.immediate(1)),
-                    ),
-                    t if t.code() == Code::Cmove_r64_rm64 => Instruction::Cmove(
-                        Arg::Register(t.op_register(0).try_into()?),
-                        Arg::Register(t.op_register(1).try_into()?),
-                    ),
-                    t if t.code() == Code::Cmovl_r64_rm64 => Instruction::Cmovl(
-                        Arg::Register(t.op_register(0).try_into()?),
-                        Arg::Register(t.op_register(1).try_into()?),
-                    ),
-                    t if t.code() == Code::Lea_r64_m => Instruction::Lea(
-                        Arg::Register(t.op_register(0).try_into()?),
-                        Arg::Address(t.memory_displacement64()),
-                    ),
-                    t if t.code() == Code::Retnq => Instruction::Ret,
-                    t => bail!("instruction code {:#?} not implmented", t.code()),
-                })
-            })
+            .map(|&x86_instr| x86_instr.try_into())
             .collect::<Vec<Result<Instruction>>>();
 
         let mut instructions = Vec::with_capacity(a86_instrs.len());
