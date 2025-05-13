@@ -2,6 +2,7 @@ use crate::a86::Instruction;
 
 type Id = usize;
 
+#[derive(Debug)]
 pub enum Datum {
     Integer(i64),
     Boolean(bool),
@@ -9,6 +10,7 @@ pub enum Datum {
     String(String),
 }
 
+#[derive(Debug)]
 pub enum Operation {
     // Op0
     ReadByte,
@@ -49,6 +51,7 @@ pub enum Operation {
     VectorSetBang(Box<Expr>, Box<Expr>, Box<Expr>),
 }
 
+#[derive(Debug)]
 pub enum Pattern {
     Var(Id),
     Literal(Datum),
@@ -57,6 +60,7 @@ pub enum Pattern {
     Conj(Box<Pattern>, Box<Pattern>),
 }
 
+#[derive(Debug)]
 pub enum Expr {
     Literal(Datum),
     Op(Operation),
@@ -73,9 +77,11 @@ pub enum Expr {
     Unknown,
 }
 
+#[derive(Debug)]
 pub struct Defn(Id, Vec<Id>, Box<Expr>);
 
+#[derive(Debug)]
 pub struct Program {
-    defines: Vec<Defn>,
-    expr: Box<Expr>,
+    pub defines: Vec<Defn>,
+    pub expr: Box<Expr>,
 }

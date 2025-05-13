@@ -272,7 +272,10 @@ impl Program {
     }
 
     pub fn address_to_symbols(&self, address: Address) -> HashSet<String> {
-        self.address_to_symbols.get(&address).cloned().unwrap_or(HashSet::new())
+        self.address_to_symbols
+            .get(&address)
+            .cloned()
+            .unwrap_or(HashSet::new())
     }
 
     pub fn symbol_to_address(&self, symbol: &str) -> Option<Address> {

@@ -8,6 +8,7 @@ use anyhow::Result;
 use clap::Parser;
 
 use a86::Program;
+use decompiler::parse;
 
 #[derive(Parser)]
 struct Args {
@@ -19,7 +20,8 @@ fn main() -> Result<()> {
 
     // Construct an A86 program from the input program
     let program = Program::from_elf_file(&args.program)?;
-    println!("Program: {:#x?}", program);
+    //println!("Program: {:#x?}", program);
+    println!("Result: {:#x?}", parse(&program));
 
     Ok(())
 }
