@@ -17,7 +17,8 @@ fn main() -> Result<()> {
 
     // Construct an A86 program from the input program
     let program = Program::from_elf_file(&args.program)?;
-    println!("Program: {:#?}", program);
+    println!("Program: {:#x?}", program);
+
 
 
     Ok(())

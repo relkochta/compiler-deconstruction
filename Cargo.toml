@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 anyhow = "1.0.98"
+bimap = "0.6.3"
 clap = { version = "4.5.37", features = ["derive"] }
 elf = "0.7.4"
 iced-x86 = "1.21.0"
