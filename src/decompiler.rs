@@ -71,11 +71,20 @@ pub fn parse_full(program: &A86Program, position: usize, stop: usize) -> Result<
                 ));
                 pos = if_end;
             }
-            [..] => bail!("what the helly"),
+            [..] => {
+                // We are in a begin statement (hopefully).
+                let v = expr_set.pop_back();
+                let next_expr = parse_full(program, pos, stop);
+                expr_set.push_back(Expr::Begin(
+                    Box::new(v.unwrap()),
+                    Box::new(next_expr.unwrap()),
+                ));
+                pos = stop;
+            }
         }
     }
 
-    (Ok(expr_set.pop_back().unwrap()))
+    Ok(expr_set.pop_back().unwrap())
 }
 
 pub fn parse_expr(program: &A86Program, position: usize) -> Result<(Expr, usize)> {
@@ -88,57 +97,6 @@ pub fn parse_expr(program: &A86Program, position: usize) -> Result<(Expr, usize)
     };
 
     Ok((initial_expr, new_pos))
-
-    //     let (expr2, new_pos) = match program.instructions()[new_pos..] {
-    //         [
-    //             Instruction::Cmp(Arg::Register(Register::Eax | Register::Rax), Arg::Literal(_)),
-    //             Instruction::Je(Arg::Address(if_false)),
-    //             ..,
-    //         ] => {
-    //             let (expr_if_true, new_pos) = parse_expr(
-    //                 program,
-    //                 new_pos + 2,
-    //                 Some(program.address_to_index(if_false).unwrap() - 1),
-    //             )?;
-    //
-    //             let if_end = match program.instructions()[new_pos] {
-    //                 Instruction::Jmp(Arg::Address(i)) => program.address_to_index(i).unwrap(),
-    //                 _ => bail!("parsing failed while trying to find end jump for if statement"),
-    //             };
-    //
-    //             let (expr_if_false, new_pos2) = parse_expr(
-    //                 program,
-    //                 program.address_to_index(if_false).unwrap(),
-    //                 Some(if_end),
-    //             )?;
-    //             (
-    //                 Expr::If(
-    //                     Box::new(initial_expr),
-    //                     Box::new(expr_if_true),
-    //                     Box::new(expr_if_false),
-    //                 ),
-    //                 new_pos2,
-    //             )
-    //         }
-    //         _ => (initial_expr, new_pos),
-    //     };
-    //
-    //     if let Some(x) = stop {
-    //         if new_pos > x {
-    //             bail!(
-    //                 "expression parsed goes to {:x}, past end of expression {:x}",
-    //                 program.index_to_address(new_pos).unwrap(),
-    //                 program.index_to_address(x).unwrap()
-    //             );
-    //         } else if new_pos < x {
-    //             // TODO: begin expression check issue here lol
-    //             bail!("expression parsed is smaller than if branch");
-    //         } else {
-    //             Ok((expr2, new_pos))
-    //         }
-    //     } else {
-    //         Ok((expr2, new_pos))
-    //     }
 }
 
 pub fn parse_defines(program: &A86Program, position: usize) -> (Vec<Defn>, usize) {
