@@ -1,4 +1,3 @@
-
 type Id = usize;
 
 #[derive(Debug)]
@@ -64,7 +63,7 @@ pub enum Expr {
     Literal(Datum),
     Op(Operation),
     If(Box<Expr>, Box<Expr>, Box<Expr>),
-    Begin(Box<Expr>, Box<Expr>, Box<Expr>),
+    Begin(Box<Expr>, Box<Expr>),
     Let(Id, Box<Expr>, Box<Expr>),
     Var(Id),
     App(Box<Expr>, Vec<Expr>),
