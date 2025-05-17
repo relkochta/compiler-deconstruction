@@ -45,7 +45,7 @@ pub fn parse_full(program: &A86Program, position: usize, stop: usize) -> Result<
 
     while pos < stop {
         // peek on the next expression
-        match program.instructions()[new_pos..] {
+        match program.instructions()[pos..] {
             [
                 Instruction::Cmp(Arg::Register(Register::Eax | Register::Rax), Arg::Literal(_)),
                 Instruction::Je(Arg::Address(if_false)),
@@ -53,7 +53,7 @@ pub fn parse_full(program: &A86Program, position: usize, stop: usize) -> Result<
             ] => {
                 let jmp_loc = program.address_to_index(if_false).unwrap() - 1;
                 // We are in an if statement.
-                let expr_if_true = parse_full(program, new_pos + 2, jmp_loc)?;
+                let expr_if_true = parse_full(program, pos + 2, jmp_loc)?;
 
                 let if_end = match program.instructions()[jmp_loc] {
                     Instruction::Jmp(Arg::Address(i)) => program.address_to_index(i).unwrap(),
