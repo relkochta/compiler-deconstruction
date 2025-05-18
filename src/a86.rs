@@ -9,7 +9,7 @@ use bimap::BiMap;
 use elf::{ElfBytes, endian::AnyEndian};
 use iced_x86::{Code, Decoder, DecoderOptions, OpKind};
 
-type Address = u64;
+pub type Address = u64;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Register {
