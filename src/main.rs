@@ -24,7 +24,9 @@ fn main() -> Result<()> {
 
     // Decompile the program
     let loot_program = parse(&a86_program)?;
-    println!("Decompiled Program: {:#x?}", loot_program);
+    println!("Decompiled Program:");
+    // println!("{:#x?}", loot_program);
+    println!("{}", loot_program);
 
     Ok(())
 }
