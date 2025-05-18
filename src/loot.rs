@@ -150,9 +150,9 @@ impl std::fmt::Display for Expr {
             Expr::Begin(e1, e2) => write!(f, "(begin\n  {}\n  {})", e1, e2),
             Expr::Let(id, e1, e2) => write!(f, "(let ([var{} {}])\n  {})", id, e1, e2),
             Expr::Var(id) => write!(f, "var{}", id),
-            Expr::App(proc, es) => { write!(f, "({}", proc); 
+            Expr::App(proc, es) => { write!(f, "({}", proc)?; 
                                      for e in es {
-                                        write!(f, " {}", e);
+                                        write!(f, " {}", e)?;
                                      }
                                      write!(f, ")") },
             // TODO: add match and lam if we get to those
@@ -168,9 +168,9 @@ pub struct Defn(pub Id, pub Vec<Id>, pub Box<Expr>);
 impl std::fmt::Display for Defn {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         if self.1.len() > 0 {
-            write!(f, "(define (defn{}", self.0);
+            write!(f, "(define (defn{}", self.0)?;
             for var in &self.1 {
-               write!(f, " var{}", var);
+               write!(f, " var{}", var)?;
             }
             write!(f, ")\n  {})", self.2)
         } else {
@@ -187,9 +187,9 @@ pub struct Program {
 
 impl std::fmt::Display for Program {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "#lang racket\n");
+        write!(f, "#lang racket\n")?;
         for defn in &self.defines {
-            write!(f, "{}\n", defn);
+            write!(f, "{}\n", defn)?;
         };
         write!(f, "{}", self.expr)
     }
