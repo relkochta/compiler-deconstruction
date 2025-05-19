@@ -5,7 +5,7 @@ use anyhow::bail;
 
 use crate::{
     a86::{Address, Arg, Instruction, Program as A86Program, Register},
-    loot::{Datum, Defn, Expr, Program as LootProgram},
+    loot::{Datum, Defn, Expr, Program as LootProgram, Operation},
 };
 
 pub fn parse_const(lit: u64) -> Option<Datum> {
@@ -36,16 +36,7 @@ pub fn parse_const(lit: u64) -> Option<Datum> {
     }
 }
 
-/*pub fn parse_range(program: &A86Program, position: usize, stop: usize) -> Result<Expr> {
-    let (mut expr, new_pos) = parse_expr(program, position)?;
-    let mut pos = new_pos;
-
-
-
-    Ok(expr)
-}*/
-
-pub fn parse_range(
+pub fn parse_expr(
     program: &A86Program,
     position: usize,
     stop: Option<usize>,
@@ -64,7 +55,8 @@ pub fn parse_range(
                 Instruction::Mov(Arg::Register(Register::Eax | Register::Rax), Arg::Literal(lit)),
                 ..,
             ] => (Expr::Literal(parse_const(lit).unwrap()), pos + 1),
-            /*[
+            [
+                // type check for int
                 Instruction::Mov(Arg::Register(Register::R9), Arg::Register(Register::Rax)),
                 Instruction::And(Arg::Register(Register::R9), Arg::Literal(0xf)),
                 Instruction::Cmp(Arg::Register(Register::R9), Arg::Literal(0x0)),
@@ -73,10 +65,25 @@ pub fn parse_range(
             ] => {
                 // We are in an Op1
                 if lab != err_label {
-                    bail!("wtf")
+                    bail!("expected jump to err label")
                 }
-                todo!()
-            }*/
+                match program.instructions()[pos + 4..] {
+                    [
+                        Instruction::Add(Arg::Register(Register::Rax), Arg::Literal(0x10)),
+                        ..,
+                    ] => {
+                        // looks like an Add1
+                        let v = expr_stack.pop_back();
+                        (
+                            Expr::Op(Operation::Add1(
+                                Box::new(v.unwrap()),
+                            )),
+                            pos + 5,
+                        )
+                    }
+                    _ => unimplemented!(),
+                }
+            }
             /*[
                 Instruction::Push(Arg::Register(Register::Eax | Register::Rax)),
                 ..,
@@ -90,18 +97,19 @@ pub fn parse_range(
             ] => {
                 let jmp_loc = program.address_to_index(if_false).unwrap() - 1;
                 // We are in an if statement.
-                let expr_if_true = parse_range(program, pos + 2, Some(jmp_loc))?.0;
+                let expr_if_true = parse_expr(program, pos + 2, Some(jmp_loc))?.0;
 
                 let if_end = match program.instructions()[jmp_loc] {
                     Instruction::Jmp(Arg::Address(i)) => program.address_to_index(i).unwrap(),
                     _ => bail!("parsing failed while trying to find end jump for if statement"),
                 };
 
-                let expr_if_false = parse_range(
+                let expr_if_false = parse_expr(
                     program,
                     program.address_to_index(if_false).unwrap(),
                     Some(if_end),
-                )?.0;
+                )?
+                .0;
 
                 let v = expr_stack.pop_back();
                 (
@@ -129,10 +137,7 @@ pub fn parse_range(
 
     let mut expr = expr_stack.pop_back().unwrap();
     while expr_stack.len() > 0 {
-        expr = Expr::Begin(
-            Box::new(expr_stack.pop_back().unwrap()),
-            Box::new(expr),
-        );
+        expr = Expr::Begin(Box::new(expr_stack.pop_back().unwrap()), Box::new(expr));
     }
 
     Ok((expr, pos))
@@ -159,6 +164,6 @@ pub fn parse(program: &A86Program) -> Result<LootProgram> {
         - 4;
     Ok(LootProgram {
         defines,
-        expr: Box::new(parse_range(program, expr_start, Some(end))?.0),
+        expr: Box::new(parse_expr(program, expr_start, Some(end))?.0),
     })
 }
