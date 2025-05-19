@@ -68,7 +68,7 @@ impl std::fmt::Display for Operation {
             Operation::ReadByte => write!(f, "read-byte"),
             Operation::PeekByte => write!(f, "peek-byte"),
             Operation::Void => write!(f, "void"),
-            
+
             // Op1
             Operation::Add1(e) => write!(f, "add1 {}", e),
             Operation::Sub1(e) => write!(f, "sub1 {}", e),
@@ -77,7 +77,7 @@ impl std::fmt::Display for Operation {
             Operation::IntegerToChar(e) => write!(f, "integer->char {}", e),
             Operation::CharToInteger(e) => write!(f, "char->integer {}", e),
             Operation::WriteByte(e) => write!(f, "write-byte {}", e),
-            Operation::EofObjectHuh(e) => write!(f, " {}", e), 
+            Operation::EofObjectHuh(e) => write!(f, " {}", e),
             Operation::Box(e) => write!(f, "box {}", e),
             Operation::Car(e) => write!(f, "car {}", e),
             Operation::Cdr(e) => write!(f, "cdr {}", e),
@@ -89,11 +89,11 @@ impl std::fmt::Display for Operation {
             Operation::VectorLength(e) => write!(f, "vector-length {}", e),
             Operation::StringHuh(e) => write!(f, "string? {}", e),
             Operation::StringLength(e) => write!(f, "string-length {}", e),
-           
+
             // Op2
             Operation::Plus(e1, e2) => write!(f, "+ {} {}", e1, e2),
-            Operation::Sub(e1, e2)=> write!(f, "- {} {}", e1, e2),
-            Operation::Less(e1, e2)=> write!(f, "< {} {}", e1, e2),  
+            Operation::Sub(e1, e2) => write!(f, "- {} {}", e1, e2),
+            Operation::Less(e1, e2) => write!(f, "< {} {}", e1, e2),
             Operation::Equal(e1, e2) => write!(f, "equal? {} {}", e1, e2),
             Operation::EqHuh(e1, e2) => write!(f, "eq? {} {}", e1, e2),
             Operation::Cons(e1, e2) => write!(f, "cons {} {}", e1, e2),
@@ -101,7 +101,7 @@ impl std::fmt::Display for Operation {
             Operation::VectorRef(e1, e2) => write!(f, "vector-ref {} {}", e1, e2),
             Operation::MakeString(e1, e2) => write!(f, "make-string {} {}", e1, e2),
             Operation::StringRef(e1, e2) => write!(f, "string-ref {} {}", e1, e2),
-            
+
             // Op3
             Operation::VectorSetBang(e1, e2, e3) => write!(f, "vector-set! {} {} {}", e1, e2, e3),
         }
@@ -150,17 +150,18 @@ impl std::fmt::Display for Expr {
             Expr::Begin(e1, e2) => write!(f, "(begin\n  {}\n  {})", e1, e2),
             Expr::Let(id, e1, e2) => write!(f, "(let ([var{} {}])\n  {})", id, e1, e2),
             Expr::Var(id) => write!(f, "var{}", id),
-            Expr::App(proc, es) => { write!(f, "({}", proc)?; 
-                                     for e in es {
-                                        write!(f, " {}", e)?;
-                                     }
-                                     write!(f, ")") },
+            Expr::App(proc, es) => {
+                write!(f, "({}", proc)?;
+                for e in es {
+                    write!(f, " {}", e)?;
+                }
+                write!(f, ")")
+            }
             // TODO: add match and lam if we get to those
-            _ => write!(f, "({:?})", self)
+            _ => write!(f, "({:?})", self),
         }
     }
 }
-
 
 #[derive(Debug)]
 pub struct Defn(pub Id, pub Vec<Id>, pub Box<Expr>);
@@ -170,7 +171,7 @@ impl std::fmt::Display for Defn {
         if self.1.len() > 0 {
             write!(f, "(define (defn{}", self.0)?;
             for var in &self.1 {
-               write!(f, " var{}", var)?;
+                write!(f, " var{}", var)?;
             }
             write!(f, ")\n  {})", self.2)
         } else {
@@ -190,7 +191,7 @@ impl std::fmt::Display for Program {
         write!(f, "#lang racket\n")?;
         for defn in &self.defines {
             write!(f, "{}\n", defn)?;
-        };
+        }
         write!(f, "{}", self.expr)
     }
 }
