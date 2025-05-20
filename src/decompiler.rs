@@ -8,7 +8,7 @@ use crate::{
     loot::{Datum, Defn, Expr, Program as LootProgram, Operation},
 };
 
-pub fn parse_const(lit: u64) -> Option<Datum> {
+pub fn parse_const(lit: u64) -> Option<Expr> {
     /*
       Bit layout of values
 
@@ -26,12 +26,13 @@ pub fn parse_const(lit: u64) -> Option<Datum> {
       - Empty:         #b100 11 000
     */
     match lit {
-        0b011000 => Some(Datum::Boolean(true)),
-        0b111000 => Some(Datum::Boolean(false)),
-        lit if lit & 0b11111 == 0b01000 => Some(Datum::Character(char::from_u32(
+        0b011000 => Some(Expr::Literal(Datum::Boolean(true))),
+        0b111000 => Some(Expr::Literal(Datum::Boolean(false))),
+        0b1111000 => Some(Expr::Op(Operation::Void)),
+        lit if lit & 0b11111 == 0b01000 => Some(Expr::Literal(Datum::Character(char::from_u32(
             (lit >> 5).try_into().unwrap(),
-        )?)),
-        lit if lit & 0b1111 == 0 => Some(Datum::Integer((lit >> 4) as i64)),
+        )?))),
+        lit if lit & 0b1111 == 0 => Some(Expr::Literal(Datum::Integer((lit >> 4) as i64))),
         _ => None,
     }
 }
@@ -54,7 +55,7 @@ pub fn parse_expr(
             [
                 Instruction::Mov(Arg::Register(Register::Eax | Register::Rax), Arg::Literal(lit)),
                 ..,
-            ] => (Expr::Literal(parse_const(lit).unwrap()), pos + 1),
+            ] => (parse_const(lit).unwrap(), pos + 1),
             [
                 // type check for int
                 Instruction::Mov(Arg::Register(Register::R9), Arg::Register(Register::Rax)),
@@ -63,7 +64,6 @@ pub fn parse_expr(
                 Instruction::Jne(Arg::Address(lab)),
                 ..,
             ] => {
-                // We are in an Op1
                 if lab != err_label {
                     bail!("expected jump to err label")
                 }
