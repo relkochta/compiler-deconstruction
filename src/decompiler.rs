@@ -57,6 +57,23 @@ pub fn parse_expr(
                 ..,
             ] => (parse_const(lit).unwrap(), pos + 1),
             [
+                // pad-stack + call + unpad-stack
+                Instruction::Mov(Arg::Register(Register::R15), Arg::Register(Register::Rsp)),
+                Instruction::And(Arg::Register(Register::R15), Arg::Literal(0x8)),
+                Instruction::Sub(Arg::Register(Register::Rsp), Arg::Register(Register::R15)),
+                Instruction::Call(addr),
+                Instruction::Add(Arg::Register(Register::Rsp), Arg::Register(Register::R15)),
+                ..,
+            ] => {
+                if addr == program.symbol_to_address("read_byte").unwrap() {
+                    (Expr::Op(Operation::ReadByte), pos + 5)
+                } else if addr == program.symbol_to_address("peek_byte").unwrap() {
+                    (Expr::Op(Operation::PeekByte), pos + 5)
+                } else {
+                    unimplemented!()
+                }
+            }
+            [
                 // type check for int
                 Instruction::Mov(Arg::Register(Register::R9), Arg::Register(Register::Rax)),
                 Instruction::And(Arg::Register(Register::R9), Arg::Literal(0xf)),
