@@ -336,6 +336,9 @@ impl Program {
         let entry_point_in_text: usize = (entry_point - text_section_start)
             .try_into()
             .context("entry point in text section too large")?;
+        let program_end = symbols_to_address
+            .get("err")
+            .context("could not find err label")? + 10;
 
         // Disassemble the text section into instructions
         let mut decoder = Decoder::with_ip(
@@ -348,6 +351,7 @@ impl Program {
 
         let a86_instrs = instrs
             .iter()
+            .filter(|&x| x.ip() <= program_end)
             .map(|&x86_instr| x86_instr.try_into())
             .collect::<Vec<Result<Instruction>>>();
 
