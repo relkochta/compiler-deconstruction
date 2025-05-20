@@ -41,8 +41,9 @@ pub fn parse_expr(
     program: &A86Program,
     position: usize,
     stop: Option<usize>,
+    stack: &mut Vec<Expr>,
 ) -> Result<(Expr, usize)> {
-    let mut expr_stack = VecDeque::new();
+    let mut expr_list = Vec::new();
     let mut pos = position;
     let err_label: Address = program.symbol_to_address("err").unwrap();
 
@@ -90,7 +91,7 @@ pub fn parse_expr(
                         ..,
                     ] => {
                         // looks like an Add1
-                        let v = expr_stack.pop_back();
+                        let v = expr_list.pop();
                         (
                             Expr::Op(Operation::Add1(
                                 Box::new(v.unwrap()),
@@ -101,12 +102,54 @@ pub fn parse_expr(
                     _ => unimplemented!(),
                 }
             }
-            /*[
+            [
                 Instruction::Push(Arg::Register(Register::Eax | Register::Rax)),
                 ..,
             ] => {
-                // We are in an Op2 or Op3
-            }*/
+                // current expression got pushed, start parsing a new one
+                let mut expr = expr_list.pop().unwrap();
+                while expr_list.len() > 0 {
+                    expr = Expr::Begin(Box::new(expr_list.pop().unwrap()), Box::new(expr));
+                }
+                stack.push(expr);
+
+                parse_expr(program, pos + 1, None, stack)?
+            }
+            [
+                // pop + type check r8 and rax for int
+                Instruction::Pop(Arg::Register(Register::R8)),
+                Instruction::Mov(Arg::Register(Register::R9), Arg::Register(Register::R8)),
+                Instruction::And(Arg::Register(Register::R9), Arg::Literal(0xf)),
+                Instruction::Cmp(Arg::Register(Register::R9), Arg::Literal(0x0)),
+                Instruction::Jne(Arg::Address(lab1)),
+                Instruction::Mov(Arg::Register(Register::R9), Arg::Register(Register::Rax)),
+                Instruction::And(Arg::Register(Register::R9), Arg::Literal(0xf)),
+                Instruction::Cmp(Arg::Register(Register::R9), Arg::Literal(0x0)),
+                Instruction::Jne(Arg::Address(lab2)),
+                ..,
+            ] => {
+                if lab1 != err_label || lab2 != err_label {
+                    bail!("expected jump to err label")
+                }
+                match program.instructions()[pos + 9..] {
+                    [
+                        Instruction::Add(Arg::Register(Register::Rax), Arg::Register(Register::R8)),
+                        ..,
+                    ] => {
+                        // looks like a Plus
+                        let arg1 = stack.pop();
+                        let arg2 = expr_list.pop();
+                        (
+                            Expr::Op(Operation::Plus(
+                                Box::new(arg1.unwrap()),
+                                Box::new(arg2.unwrap()),
+                            )),
+                            pos + 10,
+                        )
+                    }
+                    _ => unimplemented!(),
+                }
+            }
             [
                 Instruction::Cmp(Arg::Register(Register::Eax | Register::Rax), Arg::Literal(_)),
                 Instruction::Je(Arg::Address(if_false)),
@@ -114,7 +157,7 @@ pub fn parse_expr(
             ] => {
                 let jmp_loc = program.address_to_index(if_false).unwrap() - 1;
                 // We are in an if statement.
-                let expr_if_true = parse_expr(program, pos + 2, Some(jmp_loc))?.0;
+                let expr_if_true = parse_expr(program, pos + 2, Some(jmp_loc), stack)?.0;
 
                 let if_end = match program.instructions()[jmp_loc] {
                     Instruction::Jmp(Arg::Address(i)) => program.address_to_index(i).unwrap(),
@@ -125,10 +168,11 @@ pub fn parse_expr(
                     program,
                     program.address_to_index(if_false).unwrap(),
                     Some(if_end),
+                    stack
                 )?
                 .0;
 
-                let v = expr_stack.pop_back();
+                let v = expr_list.pop();
                 (
                     Expr::If(
                         Box::new(v.unwrap()),
@@ -140,21 +184,21 @@ pub fn parse_expr(
             }
             _ => (Expr::Unknown, pos),
         };
+
         pos = new_pos;
-        //println!("{:?} {:?}", expr, pos);
         match expr {
             Expr::Unknown => {
                 break;
             }
             _ => {
-                expr_stack.push_back(expr);
+                expr_list.push(expr);
             }
         }
     }
 
-    let mut expr = expr_stack.pop_back().unwrap();
-    while expr_stack.len() > 0 {
-        expr = Expr::Begin(Box::new(expr_stack.pop_back().unwrap()), Box::new(expr));
+    let mut expr = expr_list.pop().unwrap();
+    while expr_list.len() > 0 {
+        expr = Expr::Begin(Box::new(expr_list.pop().unwrap()), Box::new(expr));
     }
 
     Ok((expr, pos))
@@ -179,8 +223,9 @@ pub fn parse(program: &A86Program) -> Result<LootProgram> {
         .address_to_index(program.symbol_to_address("err").unwrap())
         .unwrap()
         - 4;
+    let mut stack = Vec::new();
     Ok(LootProgram {
         defines,
-        expr: Box::new(parse_expr(program, expr_start, Some(end))?.0),
+        expr: Box::new(parse_expr(program, expr_start, Some(end), &mut stack)?.0),
     })
 }
